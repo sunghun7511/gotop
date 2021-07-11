@@ -14,7 +14,6 @@ type DummyWidget struct {
 func NewDummyWidget() Widget {
 	gauge := tWidgets.NewGauge()
 	gauge.Title = "Slim Gauge"
-	gauge.SetRect(0, 0, 30, 30)
 	gauge.Percent = 0
 	gauge.BarColor = tui.ColorRed
 	gauge.BorderStyle.Fg = tui.ColorWhite

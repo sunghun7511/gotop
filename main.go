@@ -18,7 +18,19 @@ func initWidgets() {
 }
 
 func render() {
-	tui.Render(dummyWidget.GetUI())
+	grid := tui.NewGrid()
+	termWidth, termHeight := tui.TerminalDimensions()
+	grid.SetRect(0, 0, termWidth, termHeight)
+
+	grid.Set(
+		tui.NewRow(1.0/2, dummyWidget.GetUI()),
+		tui.NewRow(1.0/2,
+			tui.NewCol(1.0/2, dummyWidget.GetUI()),
+			tui.NewCol(1.0/2, dummyWidget.GetUI()),
+		),
+	)
+
+	tui.Render(grid)
 }
 
 func handleSignal(e tui.Event) {
