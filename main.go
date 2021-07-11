@@ -10,16 +10,11 @@ import (
 )
 
 var (
-	widgetList []widgets.Widget
-
 	dummyWidget widgets.Widget
 )
 
 func initWidgets() {
 	dummyWidget = widgets.NewDummyWidget()
-
-	widgetList = make([]widgets.Widget, 0)
-	widgetList = append(widgetList, dummyWidget)
 }
 
 func render() {
@@ -31,9 +26,11 @@ func handleSignal(e tui.Event) {
 		os.Exit(0)
 	}
 
-	for _, v := range widgetList {
-		v.HandleSignal(e)
-	}
+	dummyWidget.HandleSignal(e)
+}
+
+func updateWidgets() {
+	dummyWidget.Update()
 }
 
 func handleEvents() {
@@ -51,9 +48,7 @@ func handleEvents() {
 
 		select {
 		case <-updateStatTicker.C:
-			for _, v := range widgetList {
-				v.Update()
-			}
+			updateWidgets()
 			render()
 		default:
 		}
