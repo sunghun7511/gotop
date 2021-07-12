@@ -10,10 +10,12 @@ import (
 
 var (
 	dummyWidget widgets.Widget
+	cpuWidget   widgets.Widget
 )
 
 func initWidgets() {
 	dummyWidget = widgets.NewDummyWidget()
+	cpuWidget = widgets.NewCpuWidget()
 }
 
 func render() {
@@ -22,7 +24,7 @@ func render() {
 	grid.SetRect(0, 0, termWidth, termHeight)
 
 	grid.Set(
-		tui.NewRow(1.0/2, dummyWidget.GetUI()),
+		tui.NewRow(1.0/2, cpuWidget.GetUI()),
 		tui.NewRow(1.0/2,
 			tui.NewCol(1.0/2, dummyWidget.GetUI()),
 			tui.NewCol(1.0/2, dummyWidget.GetUI()),
