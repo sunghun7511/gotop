@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"time"
 
 	tui "github.com/gizak/termui/v3"
@@ -33,12 +32,13 @@ func render() {
 	tui.Render(grid)
 }
 
-func handleSignal(e tui.Event) {
+func handleSignal(e tui.Event) bool {
 	if e.ID == "q" || e.ID == "<C-c>" {
-		os.Exit(0)
+		return true
 	}
 
 	dummyWidget.HandleSignal(e)
+	return false
 }
 
 func updateWidgets() {
@@ -53,7 +53,9 @@ func handleEvents() {
 		// 항상 키보드 입력을 우선시 합니다.
 		select {
 		case e := <-uiEvents:
-			handleSignal(e)
+			if handleSignal(e) {
+				return
+			}
 			render()
 		default:
 		}
