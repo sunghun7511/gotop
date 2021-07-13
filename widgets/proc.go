@@ -18,12 +18,12 @@ func getFormattedString(pid, cmd string) string {
 }
 
 type Process struct {
-	pid int
+	pid string
 	cmd string
 }
 
 func (process *Process) getString() string {
-	return getFormattedString(fmt.Sprint(process.pid), process.cmd)
+	return getFormattedString(process.pid, process.cmd)
 }
 
 type ProcessWidget struct {
@@ -53,17 +53,18 @@ func (widget *ProcessWidget) Update() {
 
 	processList := make([]*Process, 0)
 	for _, file := range files {
-		pid, err := strconv.Atoi(file.Name())
+		pid := file.Name()
+		_, err := strconv.Atoi(pid)
 		if err != nil {
 			continue
 		}
-		cmdBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
+		cmdBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/comm", pid))
 		if err != nil {
 			continue
 		}
 
 		process := &Process{
-			pid: pid,
+			pid: file.Name(),
 			cmd: strings.TrimSpace(string(cmdBytes)),
 		}
 		processList = append(processList, process)
