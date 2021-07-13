@@ -62,7 +62,7 @@ func readMemoryInformation() map[string]int {
 			continue
 		}
 
-		if _, err := fmt.Sscanf(line, "%s %d kB", &key, &value); err != nil {
+		if _, err := fmt.Sscanf(line, "%s %d", &key, &value); err != nil {
 			panic(err)
 		}
 		key = strings.TrimRight(key, ":")
