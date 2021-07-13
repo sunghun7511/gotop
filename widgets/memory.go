@@ -1,11 +1,11 @@
 package widgets
 
 import (
-	"bytes"
 	"fmt"
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
 	"io/ioutil"
+	"strings"
 )
 
 type MemoryWidget struct {
@@ -54,8 +54,20 @@ func readMemoryInformation() map[string]int {
 		panic(err)
 	}
 
-	for _, line := range bytes.Split(content, []byte("\n")) {
-		fmt.Println(line)
+	for _, line := range strings.Split(string(content), "\n") {
+		var key string
+		var value int
+
+		if len(line) == 0 {
+			continue
+		}
+
+		if _, err := fmt.Sscanf(line, "%s %d kB", &key, &value); err != nil {
+			panic(err)
+		}
+		key = strings.TrimRight(key, ":")
+
+		m[key] = value
 	}
 
 	return m
