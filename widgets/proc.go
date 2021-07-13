@@ -75,19 +75,13 @@ func (widget *ProcessWidget) Update() {
 func (widget *ProcessWidget) HandleSignal(event tui.Event) {
 	switch event.ID {
 	case "<Up>":
-		widget.cursor--
-		widget.handleCursorOutBound()
+		if widget.cursor-1 > 0 {
+			widget.cursor--
+		}
 	case "<Down>":
-		widget.cursor++
-		widget.handleCursorOutBound()
-	}
-}
-
-func (widget *ProcessWidget) handleCursorOutBound() {
-	if widget.cursor < 1 {
-		widget.cursor = 1
-	} else if widget.cursor > len(widget.processList) {
-		widget.cursor = len(widget.processList)
+		if widget.cursor+1 < len(widget.processList) {
+			widget.cursor++
+		}
 	}
 }
 
