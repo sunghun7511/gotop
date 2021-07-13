@@ -9,11 +9,13 @@ import (
 )
 
 var (
-	dummyWidget widgets.Widget
+	dummyWidget  widgets.Widget
+	memoryWidget widgets.Widget
 )
 
 func initWidgets() {
 	dummyWidget = widgets.NewDummyWidget()
+	memoryWidget = widgets.NewMemoryWidget()
 }
 
 func render() {
@@ -25,7 +27,7 @@ func render() {
 		tui.NewRow(1.0/2, dummyWidget.GetUI()),
 		tui.NewRow(1.0/2,
 			tui.NewCol(1.0/2, dummyWidget.GetUI()),
-			tui.NewCol(1.0/2, dummyWidget.GetUI()),
+			tui.NewCol(1.0/2, memoryWidget.GetUI()),
 		),
 	)
 
@@ -38,11 +40,13 @@ func handleSignal(e tui.Event) bool {
 	}
 
 	dummyWidget.HandleSignal(e)
+	memoryWidget.HandleSignal(e)
 	return false
 }
 
 func updateWidgets() {
 	dummyWidget.Update()
+	memoryWidget.Update()
 }
 
 func handleEvents() {
