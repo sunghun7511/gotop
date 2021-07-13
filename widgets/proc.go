@@ -2,6 +2,9 @@ package widgets
 
 import (
 	"fmt"
+	"io/ioutil"
+	"strconv"
+	"strings"
 
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
@@ -11,7 +14,7 @@ func getFormattedString(pid, cmd string) string {
 	if len(cmd) > 20 {
 		cmd = cmd[:17] + "..."
 	}
-	return fmt.Sprintf("%5s  %20s", pid, cmd)
+	return fmt.Sprintf("%7s  %20s", pid, cmd)
 }
 
 type Process struct {
@@ -24,7 +27,7 @@ func (process *Process) getString() string {
 }
 
 type ProcessWidget struct {
-	processList []Process
+	processList []*Process
 	cursor      int
 	listWidget  *tWidgets.List
 }
@@ -36,32 +39,36 @@ func NewProcessWidget() Widget {
 	listWidget.Rows = make([]string, 0)
 
 	return &ProcessWidget{
-		processList: make([]Process, 0),
+		processList: make([]*Process, 0),
 		cursor:      1,
 		listWidget:  listWidget,
 	}
 }
 
 func (widget *ProcessWidget) Update() {
-	// TODO: delete dummy
-	widget.processList = []Process{
-		{
-			pid: 1,
-			cmd: "12345",
-		},
-		{
-			pid: 1342,
-			cmd: "456",
-		},
-		{
-			pid: 12346,
-			cmd: "23",
-		},
-		{
-			pid: 12,
-			cmd: "1",
-		},
+	files, err := ioutil.ReadDir("/proc")
+	if err != nil {
+		return
 	}
+
+	processList := make([]*Process, 0)
+	for _, file := range files {
+		pid, err := strconv.Atoi(file.Name())
+		if err != nil {
+			continue
+		}
+		cmdBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
+		if err != nil {
+			continue
+		}
+
+		process := &Process{
+			pid: pid,
+			cmd: strings.TrimSpace(string(cmdBytes)),
+		}
+		processList = append(processList, process)
+	}
+	widget.processList = processList
 }
 
 func (widget *ProcessWidget) HandleSignal(event tui.Event) {
