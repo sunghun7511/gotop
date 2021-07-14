@@ -1,47 +1,97 @@
 package widgets
 
 import (
+	"runtime"
+	"bufio"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
 )
 
+var POINTS = 30
+
 type CpuWidget struct {
-	data [][]float64
-	plot *tWidgets.Plot
+	cores            int
+	prevUserProcTime []uint64
+	prevTotalTime    []uint64
+	data             [][]float64
+	plot             *tWidgets.Plot
 }
 
 func NewCpuWidget() Widget {
+	cores := runtime.NumCPU()
+
+	prevUserProcTime := make([]uint64, cores)
+	prevTotalTime := make([]uint64, cores)
+	data := make([][]float64, cores)
+
 	plot := tWidgets.NewPlot()
-	plot.Title = "CPU Usage"
+	plot.Title = " CPU Usage "
+
+	termWidth, _ := tui.TerminalDimensions()
+	for i := 0; i < cores; i++ {
+		data[i] = make([]float64, termWidth/3+1)
+	}
 
 	plot.AxesColor = tui.ColorWhite
-	plot.LineColors[0] = tui.ColorBlue
+
+	plot.HorizontalScale = 3
 
 	plot.ShowAxes = false
 	plot.MaxVal = 100
 
-	data := makeData()
 	plot.Data = data
 
 	return &CpuWidget{
-		data: data,
-		plot: plot,
+		cores:            cores,
+		prevUserProcTime: prevUserProcTime,
+		prevTotalTime:    prevTotalTime,
+		data:             data,
+		plot:             plot,
 	}
-}
-
-func makeData() [][]float64 {
-	data := make([][]float64, 1)
-	n := 100
-	data[0] = make([]float64, n)
-
-	for i := 0; i < n; i++ {
-		data[0][i] = float64(i) + 5
-	}
-	return data
 }
 
 func (widget *CpuWidget) Update() {
 	// read data from /proc/stat
+
+	file, err := os.Open("/proc/stat")
+	if err != nil {
+		log.Fatal(err)
+	}
+	scanner := bufio.NewScanner(file)
+	scanner.Scan() // ignore first line
+
+	for core := 0; core < widget.cores; core++ {
+		scanner.Scan()
+		cpuTimeReport := scanner.Text()
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+		cpuTimes := strings.Fields(cpuTimeReport)[1:]
+
+		userProcTime, _ := strconv.ParseUint(cpuTimes[0], 10, 64)
+
+		totalTime := uint64(0)
+		for _, token := range cpuTimes {
+			time, _ := strconv.ParseUint(token, 10, 64)
+			totalTime += time
+		}
+
+		cpuTimeChange := userProcTime - widget.prevUserProcTime[core]
+		totalTimeChange := totalTime - widget.prevTotalTime[core]
+		cpuUsage := (float64(cpuTimeChange) / float64(totalTimeChange)) * 100.0
+
+		widget.data[core] = append(widget.data[core], cpuUsage)
+		widget.data[core] = widget.data[core][1:]
+		
+		widget.prevUserProcTime[core] = userProcTime
+		widget.prevTotalTime[core] = totalTime
+	}
+	file.Close()
 }
 
 func (widget *CpuWidget) HandleSignal(event tui.Event) {

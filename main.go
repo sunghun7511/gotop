@@ -45,6 +45,7 @@ func handleSignal(e tui.Event) bool {
 
 func updateWidgets() {
 	dummyWidget.Update()
+	cpuWidget.Update()
 }
 
 func handleEvents() {
