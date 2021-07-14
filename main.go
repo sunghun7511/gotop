@@ -26,8 +26,8 @@ func render() {
 	grid.Set(
 		tui.NewRow(1.0/2, dummyWidget.GetUI()),
 		tui.NewRow(1.0/2,
-			tui.NewCol(1.0/2, dummyWidget.GetUI()),
 			tui.NewCol(1.0/2, memoryWidget.GetUI()),
+			tui.NewCol(1.0/2, dummyWidget.GetUI()),
 		),
 	)
 
