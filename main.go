@@ -9,15 +9,17 @@ import (
 )
 
 var (
-	dummyWidget widgets.Widget
-	cpuWidget   widgets.Widget
-	memoryWidget widgets.Widget
+	dummyWidget   widgets.Widget
+	cpuWidget     widgets.Widget
+	memoryWidget  widgets.Widget
+	processWidget widgets.Widget
 )
 
 func initWidgets() {
 	dummyWidget = widgets.NewDummyWidget()
 	cpuWidget = widgets.NewCpuWidget()
 	memoryWidget = widgets.NewMemoryWidget()
+	processWidget = widgets.NewMemoryWidget()
 }
 
 func render() {
@@ -29,7 +31,7 @@ func render() {
 		tui.NewRow(1.0/2, cpuWidget.GetUI()),
 		tui.NewRow(1.0/2,
 			tui.NewCol(1.0/2, memoryWidget.GetUI()),
-			tui.NewCol(1.0/2, dummyWidget.GetUI()),
+			tui.NewCol(1.0/2, processWidget.GetUI()),
 		),
 	)
 
@@ -43,6 +45,7 @@ func handleSignal(e tui.Event) bool {
 
 	dummyWidget.HandleSignal(e)
 	memoryWidget.HandleSignal(e)
+	processWidget.HandleSignal(e)
 	return false
 }
 
@@ -50,6 +53,7 @@ func updateWidgets() {
 	dummyWidget.Update()
 	cpuWidget.Update()
 	memoryWidget.Update()
+	processWidget.Update()
 }
 
 func handleEvents() {
