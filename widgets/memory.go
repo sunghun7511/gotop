@@ -9,7 +9,7 @@ import (
 )
 
 type MemoryWidget struct {
-	information map[string]int
+	information map[string]int64
 	gauge       *tWidgets.Gauge
 }
 
@@ -22,7 +22,7 @@ func NewMemoryWidget() Widget {
 	gauge.TitleStyle.Fg = tui.ColorCyan
 
 	return &MemoryWidget{
-		information: make(map[string]int),
+		information: make(map[string]int64),
 		gauge:       gauge,
 	}
 }
@@ -45,8 +45,8 @@ func (widget *MemoryWidget) GetUI() tui.Drawable {
 	return widget.gauge
 }
 
-func readMemoryInformation() map[string]int {
-	m := make(map[string]int)
+func readMemoryInformation() map[string]int64 {
+	m := make(map[string]int64)
 
 	content, err := ioutil.ReadFile("/proc/meminfo")
 	if err != nil {
@@ -55,7 +55,7 @@ func readMemoryInformation() map[string]int {
 
 	for _, line := range strings.Split(string(content), "\n") {
 		var key string
-		var value int
+		var value int64
 
 		if len(line) == 0 {
 			continue
