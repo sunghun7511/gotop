@@ -41,7 +41,7 @@ func (widget *MemoryWidget) GetUI() tui.Drawable {
 	total := widget.information["MemTotal"]
 	available := widget.information["MemAvailable"]
 
-	widget.gauge.Percent = int(float64(available) / float64(total) * 100)
+	widget.gauge.Percent = int(float64(total-available) / float64(total) * 100)
 	return widget.gauge
 }
 
