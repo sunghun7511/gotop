@@ -17,7 +17,7 @@ var (
 func initWidgets() {
 	cpuWidget = widgets.NewCpuWidget()
 	memoryWidget = widgets.NewMemoryWidget()
-	processWidget = widgets.NewMemoryWidget()
+	processWidget = widgets.NewProcessWidget()
 }
 
 func render() {
