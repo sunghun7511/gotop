@@ -9,12 +9,14 @@ import (
 )
 
 var (
-	dummyWidget  widgets.Widget
+	dummyWidget widgets.Widget
+	cpuWidget   widgets.Widget
 	memoryWidget widgets.Widget
 )
 
 func initWidgets() {
 	dummyWidget = widgets.NewDummyWidget()
+	cpuWidget = widgets.NewCpuWidget()
 	memoryWidget = widgets.NewMemoryWidget()
 }
 
@@ -24,7 +26,7 @@ func render() {
 	grid.SetRect(0, 0, termWidth, termHeight)
 
 	grid.Set(
-		tui.NewRow(1.0/2, dummyWidget.GetUI()),
+		tui.NewRow(1.0/2, cpuWidget.GetUI()),
 		tui.NewRow(1.0/2,
 			tui.NewCol(1.0/2, memoryWidget.GetUI()),
 			tui.NewCol(1.0/2, dummyWidget.GetUI()),
@@ -46,6 +48,7 @@ func handleSignal(e tui.Event) bool {
 
 func updateWidgets() {
 	dummyWidget.Update()
+	cpuWidget.Update()
 	memoryWidget.Update()
 }
 
