@@ -28,8 +28,7 @@ func NewMemoryWidget() Widget {
 }
 
 func (widget *MemoryWidget) Update() {
-	information := readMemoryInformation()
-	widget.information = information
+	widget.information = readMemoryInformation()
 }
 
 func (widget *MemoryWidget) HandleSignal(event tui.Event) {
