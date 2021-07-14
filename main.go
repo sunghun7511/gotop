@@ -9,14 +9,12 @@ import (
 )
 
 var (
-	dummyWidget   widgets.Widget
 	cpuWidget     widgets.Widget
 	memoryWidget  widgets.Widget
 	processWidget widgets.Widget
 )
 
 func initWidgets() {
-	dummyWidget = widgets.NewDummyWidget()
 	cpuWidget = widgets.NewCpuWidget()
 	memoryWidget = widgets.NewMemoryWidget()
 	processWidget = widgets.NewMemoryWidget()
@@ -43,14 +41,12 @@ func handleSignal(e tui.Event) bool {
 		return true
 	}
 
-	dummyWidget.HandleSignal(e)
 	memoryWidget.HandleSignal(e)
 	processWidget.HandleSignal(e)
 	return false
 }
 
 func updateWidgets() {
-	dummyWidget.Update()
 	cpuWidget.Update()
 	memoryWidget.Update()
 	processWidget.Update()
