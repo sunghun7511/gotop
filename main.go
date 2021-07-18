@@ -12,6 +12,8 @@ var (
 	cpuWidget     widgets.Widget
 	memoryWidget  widgets.Widget
 	processWidget widgets.Widget
+
+	endChan       chan struct{}
 )
 
 func initWidgets() {
@@ -38,6 +40,7 @@ func render() {
 
 func handleSignal(e tui.Event) bool {
 	if e.ID == "q" || e.ID == "<C-c>" {
+		endChan <- struct{}{}
 		return true
 	}
 
@@ -53,27 +56,24 @@ func updateWidgets() {
 }
 
 func handleEvents() {
-	uiEvents := tui.PollEvents()
-	updateStatTicker := time.NewTicker(1 * time.Second)
-
-	for {
-		// 항상 키보드 입력을 우선시 합니다.
-		select {
-		case e := <-uiEvents:
+	go func() {
+		uiEvents := tui.PollEvents()
+		for {
+			e := <-uiEvents
 			if handleSignal(e) {
 				return
 			}
 			render()
-		default:
 		}
-
-		select {
-		case <-updateStatTicker.C:
+	}()
+	go func() {
+		updateStatTicker := time.NewTicker(1 * time.Second)
+		for {
+			<-updateStatTicker.C
 			updateWidgets()
 			render()
-		default:
 		}
-	}
+	}()
 }
 
 func main() {
@@ -84,4 +84,7 @@ func main() {
 
 	initWidgets()
 	handleEvents()
+
+	endChan = make(chan struct{})
+	<-endChan
 }
