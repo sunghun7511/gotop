@@ -38,15 +38,14 @@ func render() {
 	tui.Render(grid)
 }
 
-func handleSignal(e tui.Event) bool {
+func handleSignal(e tui.Event) {
 	if e.ID == "q" || e.ID == "<C-c>" {
 		endChan <- struct{}{}
-		return true
+		return
 	}
 
 	memoryWidget.HandleSignal(e)
 	processWidget.HandleSignal(e)
-	return false
 }
 
 func updateWidgets() {
@@ -60,9 +59,7 @@ func handleEvents() {
 		uiEvents := tui.PollEvents()
 		for {
 			e := <-uiEvents
-			if handleSignal(e) {
-				return
-			}
+			handleSignal(e)
 			render()
 		}
 	}()
