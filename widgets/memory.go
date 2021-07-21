@@ -24,7 +24,7 @@ func NewMemoryWidget() Widget {
 
 	termWidth, _ := tui.TerminalDimensions()
 	return &MemoryWidget{
-		history: make([]float64, termWidth/2+1),
+		history: make([]float64, termWidth/2-2),
 		widget:  widget,
 		group:   group,
 	}
