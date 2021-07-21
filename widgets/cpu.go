@@ -114,11 +114,17 @@ func getCpuStats() CpuStats {
 func parseCpuCoreStats(cpuCoreStats string) CpuCoreStats {
 	cpuTimes := strings.Fields(cpuCoreStats)[1:]
 
-	userProcessTime, _ := strconv.ParseUint(cpuTimes[0], 10, 64)
+	userProcessTime, err := strconv.ParseUint(cpuTimes[0], 10, 64)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	totalTime := uint64(0)
 	for _, data := range cpuTimes {
-		time, _ := strconv.ParseUint(data, 10, 64)
+		time, err := strconv.ParseUint(data, 10, 64)
+		if err != nil {
+			log.Fatal(err)
+		}
 		totalTime += time
 	}
 
