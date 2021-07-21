@@ -31,7 +31,13 @@ func NewMemoryWidget() Widget {
 }
 
 func (widget *MemoryWidget) Update() {
-	widget.widget.Data = widget.history
+	information := readMemoryInformation()
+	total := information["MemTotal"]
+	available := information["MemAvailable"]
+
+	value := float64(total-available) / float64(total) * 100
+	widget.history = append(widget.history, value)
+	widget.history = widget.history[1:]
 }
 
 func (widget *MemoryWidget) HandleSignal(event tui.Event) {
@@ -41,14 +47,7 @@ func (widget *MemoryWidget) HandleSignal(event tui.Event) {
 }
 
 func (widget *MemoryWidget) GetUI() tui.Drawable {
-	information := readMemoryInformation()
-	total := information["MemTotal"]
-	available := information["MemAvailable"]
-
-	value := float64(total-available) / float64(total) * 100
-	widget.history = append(widget.history, value)
-	widget.history = widget.history[1:]
-
+	widget.widget.Data = widget.history
 	return widget.group
 }
 
