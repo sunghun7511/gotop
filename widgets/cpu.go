@@ -38,7 +38,10 @@ func NewCpuWidget() Widget {
 	plot.ShowAxes = false
 	plot.MaxVal = 100
 
-	cpuStats := getCpuStats()
+	cpuStats, err := getCpuStats()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	data := make([][]float64, cpuStats.cores)
 
@@ -57,7 +60,12 @@ func NewCpuWidget() Widget {
 }
 
 func (widget *CpuWidget) Update() {
-	currentCpuStats := getCpuStats()
+	currentCpuStats, err := getCpuStats()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	previousCpuStats := widget.cpuStats
 
 	cores := currentCpuStats.cores
@@ -82,10 +90,10 @@ func (widget *CpuWidget) GetUI() tui.Drawable {
 }
 
 // read and parse cpu usage data from /proc/stat
-func getCpuStats() CpuStats {
+func getCpuStats() (CpuStats, error) {
 	file, err := os.Open("/proc/stat")
 	if err != nil {
-		log.Fatal(err)
+		return CpuStats{}, err
 	}
 	defer file.Close()
 
@@ -98,32 +106,35 @@ func getCpuStats() CpuStats {
 		scanner.Scan()
 		cpuCoreStats := scanner.Text()
 		if err := scanner.Err(); err != nil {
-			log.Fatal(err)
+			return CpuStats{}, err
 		}
 
-		stats[core] = parseCpuCoreStats(cpuCoreStats)
+		stats[core], err = parseCpuCoreStats(cpuCoreStats)
+		if err != nil {
+			return CpuStats{}, err
+		}
 	}
 
 	return CpuStats{
 		cores: cores,
 		stats: stats,
-	}
+	}, nil
 }
 
 // parse usage data of each cpu core
-func parseCpuCoreStats(cpuCoreStats string) CpuCoreStats {
+func parseCpuCoreStats(cpuCoreStats string) (CpuCoreStats, error) {
 	cpuTimes := strings.Fields(cpuCoreStats)[1:]
 
 	userProcessTime, err := strconv.ParseUint(cpuTimes[0], 10, 64)
 	if err != nil {
-		log.Fatal(err)
+		return CpuCoreStats{}, err
 	}
 
 	totalTime := uint64(0)
 	for _, data := range cpuTimes {
 		time, err := strconv.ParseUint(data, 10, 64)
 		if err != nil {
-			log.Fatal(err)
+			return CpuCoreStats{}, err
 		}
 		totalTime += time
 	}
@@ -131,7 +142,7 @@ func parseCpuCoreStats(cpuCoreStats string) CpuCoreStats {
 	return CpuCoreStats{
 		userProcessTime: userProcessTime,
 		totalTime:       totalTime,
-	}
+	}, nil
 }
 
 func calculateCoreUsage(previousCoreStats, currentCoreStats CpuCoreStats) float64 {
