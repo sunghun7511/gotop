@@ -41,6 +41,11 @@ func NewCpuWidget() Widget {
 	cpuStats, err := getCpuStats()
 	if err != nil {
 		log.Fatal(err)
+		cores := runtime.NumCPU()
+		cpuStats = CpuStats{
+			cores: cores,
+			stats: make([]CpuCoreStats, cores),
+		}
 	}
 
 	data := make([][]float64, cpuStats.cores)
