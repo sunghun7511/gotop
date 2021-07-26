@@ -9,26 +9,35 @@ import (
 )
 
 type MemoryWidget struct {
-	information map[string]int64
-	gauge       *tWidgets.Gauge
+	history []float64
+	widget  *tWidgets.Sparkline
+	group   *tWidgets.SparklineGroup
 }
 
 func NewMemoryWidget() Widget {
-	gauge := tWidgets.NewGauge()
-	gauge.Title = "Memory Usage"
-	gauge.Percent = 0
-	gauge.BarColor = tui.ColorRed
-	gauge.BorderStyle.Fg = tui.ColorWhite
-	gauge.TitleStyle.Fg = tui.ColorCyan
+	widget := tWidgets.NewSparkline()
+	widget.LineColor = tui.ColorGreen
+	widget.MaxVal = 100
 
+	group := tWidgets.NewSparklineGroup(widget)
+	group.Title = "Memory Usage"
+
+	termWidth, _ := tui.TerminalDimensions()
 	return &MemoryWidget{
-		information: make(map[string]int64),
-		gauge:       gauge,
+		history: make([]float64, termWidth/2-2),
+		widget:  widget,
+		group:   group,
 	}
 }
 
 func (widget *MemoryWidget) Update() {
-	widget.information = readMemoryInformation()
+	information := readMemoryInformation()
+	total := information["MemTotal"]
+	available := information["MemAvailable"]
+
+	value := float64(total-available) / float64(total) * 100
+	widget.history = append(widget.history, value)
+	widget.history = widget.history[1:]
 }
 
 func (widget *MemoryWidget) HandleSignal(event tui.Event) {
@@ -38,11 +47,8 @@ func (widget *MemoryWidget) HandleSignal(event tui.Event) {
 }
 
 func (widget *MemoryWidget) GetUI() tui.Drawable {
-	total := widget.information["MemTotal"]
-	available := widget.information["MemAvailable"]
-
-	widget.gauge.Percent = int(float64(total-available) / float64(total) * 100)
-	return widget.gauge
+	widget.widget.Data = widget.history
+	return widget.group
 }
 
 func readMemoryInformation() map[string]int64 {
