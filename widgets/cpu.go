@@ -18,14 +18,17 @@ type CpuCoreStats struct {
 }
 
 type CpuStats struct {
-	cores int
-	stats []CpuCoreStats
+	cores      int
+	stats      []CpuCoreStats
+	totalStats CpuCoreStats
 }
 
 type CpuWidget struct {
-	cpuStats CpuStats
-	data     [][]float64
-	plot     *tWidgets.Plot
+	cpuStats     CpuStats
+	totalData    [][]float64
+	data         [][]float64
+	showEachCore bool
+	plot         *tWidgets.Plot
 }
 
 var HORIZONTAL_SCALE = 3
@@ -50,12 +53,17 @@ func NewCpuWidget() Widget {
 		data[i] = make([]float64, termWidth/HORIZONTAL_SCALE+1)
 	}
 
-	plot.Data = data
+	totalData := make([][]float64, 1)
+	totalData[0] = make([]float64, termWidth/HORIZONTAL_SCALE+1)
+
+	plot.Data = totalData
 
 	return &CpuWidget{
-		cpuStats: cpuStats,
-		data:     data,
-		plot:     plot,
+		cpuStats:     cpuStats,
+		data:         data,
+		totalData:    totalData,
+		showEachCore: false,
+		plot:         plot,
 	}
 }
 
@@ -67,6 +75,10 @@ func (widget *CpuWidget) Update() {
 	}
 
 	previousCpuStats := widget.cpuStats
+
+	totalCpuUsage := calculateCoreUsage(previousCpuStats.totalStats, currentCpuStats.totalStats)
+	widget.totalData[0] = append(widget.totalData[0], totalCpuUsage)
+	widget.totalData[0] = widget.totalData[0][1:]
 
 	cores := currentCpuStats.cores
 	for core := 0; core < cores; core++ {
@@ -81,11 +93,18 @@ func (widget *CpuWidget) Update() {
 }
 
 func (widget *CpuWidget) HandleSignal(event tui.Event) {
-	// is there anything to handle?
+	switch event.ID {
+	case "1":
+		widget.showEachCore = !widget.showEachCore
+	}
 }
 
 func (widget *CpuWidget) GetUI() tui.Drawable {
-	widget.plot.Data = widget.data
+	if widget.showEachCore {
+		widget.plot.Data = widget.data
+	} else {
+		widget.plot.Data = widget.totalData
+	}
 	return widget.plot
 }
 
@@ -98,7 +117,16 @@ func getCpuStats() (CpuStats, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	scanner.Scan() // ignore first line
+	scanner.Scan() // total cpu usage
+	cpuTotalStats := scanner.Text()
+	if err := scanner.Err(); err != nil {
+		return CpuStats{}, err
+	}
+
+	totalStats, err := parseCpuStats(cpuTotalStats)
+	if err != nil {
+		return CpuStats{}, err
+	}
 
 	cores := runtime.NumCPU()
 	stats := make([]CpuCoreStats, cores)
@@ -109,20 +137,21 @@ func getCpuStats() (CpuStats, error) {
 			return CpuStats{}, err
 		}
 
-		stats[core], err = parseCpuCoreStats(cpuCoreStats)
+		stats[core], err = parseCpuStats(cpuCoreStats)
 		if err != nil {
 			return CpuStats{}, err
 		}
 	}
 
 	return CpuStats{
-		cores: cores,
-		stats: stats,
+		cores:      cores,
+		stats:      stats,
+		totalStats: totalStats,
 	}, nil
 }
 
-// parse usage data of each cpu core
-func parseCpuCoreStats(cpuCoreStats string) (CpuCoreStats, error) {
+// parse usage data from /proc/stat
+func parseCpuStats(cpuCoreStats string) (CpuCoreStats, error) {
 	cpuTimes := strings.Fields(cpuCoreStats)[1:]
 
 	userProcessTime, err := strconv.ParseUint(cpuTimes[0], 10, 64)

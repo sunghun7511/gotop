@@ -13,7 +13,7 @@ var (
 	memoryWidget  widgets.Widget
 	processWidget widgets.Widget
 
-	endChan       chan struct{}
+	endChan chan struct{}
 )
 
 func initWidgets() {
@@ -44,6 +44,7 @@ func handleSignal(e tui.Event) {
 		return
 	}
 
+	cpuWidget.HandleSignal(e)
 	memoryWidget.HandleSignal(e)
 	processWidget.HandleSignal(e)
 }
