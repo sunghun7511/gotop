@@ -31,13 +31,13 @@ type CpuWidget struct {
 	plot         *tWidgets.Plot
 }
 
-var HORIZONTAL_SCALE = 3
+var HorizontalScale = 3
 
 func NewCpuWidget() Widget {
 	plot := tWidgets.NewPlot()
 	plot.Title = " CPU Usage "
 	plot.AxesColor = tui.ColorWhite
-	plot.HorizontalScale = HORIZONTAL_SCALE
+	plot.HorizontalScale = HorizontalScale
 	plot.ShowAxes = false
 	plot.MaxVal = 100
 
@@ -50,11 +50,11 @@ func NewCpuWidget() Widget {
 
 	termWidth, _ := tui.TerminalDimensions()
 	for i := 0; i < cpuStats.cores; i++ {
-		data[i] = make([]float64, termWidth/HORIZONTAL_SCALE+1)
+		data[i] = make([]float64, termWidth/HorizontalScale+1)
 	}
 
 	totalData := make([][]float64, 1)
-	totalData[0] = make([]float64, termWidth/HORIZONTAL_SCALE+1)
+	totalData[0] = make([]float64, termWidth/HorizontalScale+1)
 
 	plot.Data = totalData
 
