@@ -77,8 +77,7 @@ func (widget *CpuWidget) Update() {
 	previousCpuStats := widget.cpuStats
 
 	totalCpuUsage := calculateCoreUsage(previousCpuStats.totalStats, currentCpuStats.totalStats)
-	widget.totalData[0] = append(widget.totalData[0], totalCpuUsage)
-	widget.totalData[0] = widget.totalData[0][1:]
+	widget.totalData[0] = pushUsageData(widget.totalData[0], totalCpuUsage)
 
 	cores := currentCpuStats.cores
 	for core := 0; core < cores; core++ {
@@ -86,7 +85,7 @@ func (widget *CpuWidget) Update() {
 		currentCoreStats := currentCpuStats.stats[core]
 
 		coreUsage := calculateCoreUsage(previousCoreStats, currentCoreStats)
-		widget.pushCoreUsageData(core, coreUsage)
+		widget.data[core] = pushUsageData(widget.data[core], coreUsage)
 	}
 
 	widget.cpuStats = currentCpuStats
@@ -117,27 +116,18 @@ func getCpuStats() (CpuStats, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	scanner.Scan() // total cpu usage
-	cpuTotalStats := scanner.Text()
-	if err := scanner.Err(); err != nil {
-		return CpuStats{}, err
-	}
 
-	totalStats, err := parseCpuStats(cpuTotalStats)
+	// parse total cpu usage
+	totalStats, err := parseCpuStats(scanner)
 	if err != nil {
 		return CpuStats{}, err
 	}
 
+	// parse usage data of each core
 	cores := runtime.NumCPU()
 	stats := make([]CpuCoreStats, cores)
 	for core := 0; core < cores; core++ {
-		scanner.Scan()
-		cpuCoreStats := scanner.Text()
-		if err := scanner.Err(); err != nil {
-			return CpuStats{}, err
-		}
-
-		stats[core], err = parseCpuStats(cpuCoreStats)
+		stats[core], err = parseCpuStats(scanner)
 		if err != nil {
 			return CpuStats{}, err
 		}
@@ -150,8 +140,14 @@ func getCpuStats() (CpuStats, error) {
 	}, nil
 }
 
-// parse usage data from /proc/stat
-func parseCpuStats(cpuCoreStats string) (CpuCoreStats, error) {
+// read each line from /proc/stat and parse it to CpuCoreStats
+func parseCpuStats(scanner *bufio.Scanner) (CpuCoreStats, error) {
+	scanner.Scan()
+	cpuCoreStats := scanner.Text()
+	if err := scanner.Err(); err != nil {
+		return CpuCoreStats{}, err
+	}
+
 	cpuTimes := strings.Fields(cpuCoreStats)[1:]
 
 	userProcessTime, err := strconv.ParseUint(cpuTimes[0], 10, 64)
@@ -181,7 +177,8 @@ func calculateCoreUsage(previousCoreStats, currentCoreStats CpuCoreStats) float6
 	return (float64(deltaUserProcessTime) / float64(deltaTotalTime)) * 100.0
 }
 
-func (widget *CpuWidget) pushCoreUsageData(core int, coreUsage float64) {
-	widget.data[core] = append(widget.data[core], coreUsage)
-	widget.data[core] = widget.data[core][1:]
+func pushUsageData(data []float64, coreUsage float64) []float64 {
+	data = append(data, coreUsage)
+	data = data[1:]
+	return data
 }
