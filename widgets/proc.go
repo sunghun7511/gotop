@@ -65,15 +65,7 @@ func NewProcessWidget() Widget {
 		log.Fatal(err)
 	}
 
-	var totalMem uint64
-	file, err := ioutil.ReadFile("/proc/meminfo")
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = fmt.Sscanf(string(file), "MemTotal: %d kB", &totalMem)
-	if err != nil {
-		log.Fatal(err)
-	}
+	totalMem := uint64(handler.ReadMemoryInformation().Total)
 
 	// KB로 단위를 맞추기 위해 1024를 나눠줍니다.
 	pageSizeKB := os.Getpagesize() / 1024
