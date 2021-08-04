@@ -36,7 +36,7 @@ func (widget *MemoryWidget) Update() {
 	available := information.Available
 
 	value := float64(total-available) / float64(total) * 100
-	util.PushUsageData(widget.history, value)
+	widget.history = util.PushUsageData(widget.history, value)
 }
 
 func (widget *MemoryWidget) HandleSignal(event tui.Event) {
