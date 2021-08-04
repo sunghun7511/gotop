@@ -13,6 +13,8 @@ import (
 
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
+	"github.com/sunghun7511/gotop/handler"
+	"github.com/sunghun7511/gotop/model"
 )
 
 func getFormattedString(pid, cmd, cpu, mem string) string {
@@ -40,12 +42,11 @@ func (process *Process) getString() string {
 	)
 }
 
-// TODO: cpuStats refactoring is needed
 // ProcessWidget process widget
 type ProcessWidget struct {
 	listWidget *tWidgets.List
 
-	cpuStats    CpuStats
+	cpuStats    model.CpuStats
 	totalMem    uint64
 	pageSizeKB  uint64
 	processList []*Process
@@ -59,7 +60,7 @@ func NewProcessWidget() Widget {
 	listWidget.TextStyle = tui.NewStyle(tui.ColorYellow)
 	listWidget.Rows = make([]string, 0)
 
-	cpuStats, err := getCpuStats()
+	cpuStats, err := handler.GetCPUStats()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -89,15 +90,15 @@ func NewProcessWidget() Widget {
 // Update update process data
 func (widget *ProcessWidget) Update() {
 	// update cpu data
-	curCPUStat, err := getCpuStats()
+	curCPUStat, err := handler.GetCPUStats()
 	if err != nil {
 		return
 	}
 
 	var totalTimeDiff uint64
-	for i := 0; i < widget.cpuStats.cores; i++ {
-		totalTimeDiff += curCPUStat.stats[i].totalTime - widget.cpuStats.stats[i].totalTime
-		widget.cpuStats.stats[i].totalTime = curCPUStat.stats[i].totalTime
+	for i := 0; i < widget.cpuStats.Cores; i++ {
+		totalTimeDiff += curCPUStat.Stats[i].TotalTime - widget.cpuStats.Stats[i].TotalTime
+		widget.cpuStats.Stats[i].TotalTime = curCPUStat.Stats[i].TotalTime
 	}
 
 	// update process data
@@ -160,7 +161,7 @@ func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uin
 		if err == nil {
 			prevCPUUsage = prevProcess.totalCPUUsage
 		}
-		cpuUsage := float64((curCPUUsage-prevCPUUsage)*uint64(widget.cpuStats.cores)*100) / float64(totalTime)
+		cpuUsage := float64((curCPUUsage-prevCPUUsage)*uint64(widget.cpuStats.Cores)*100) / float64(totalTime)
 
 		statmBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/statm", pid))
 		if err != nil {
