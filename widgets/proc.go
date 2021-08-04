@@ -9,10 +9,10 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"strings"
 
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
+
 	"github.com/sunghun7511/gotop/handler"
 	"github.com/sunghun7511/gotop/model"
 )
@@ -24,21 +24,12 @@ func getFormattedString(pid, cmd, cpu, mem string) string {
 	return fmt.Sprintf("%7s  %20s  %4s%% %4s%%", pid, cmd, cpu, mem)
 }
 
-// Process process info
-type Process struct {
-	pid           string
-	cmd           string
-	totalCPUUsage uint64
-	cpuUsage      float64
-	memUsage      float64
-}
-
-func (process *Process) getString() string {
+func getString(process *model.Process) string {
 	return getFormattedString(
-		process.pid,
-		process.cmd,
-		fmt.Sprintf("%2.1f", process.cpuUsage),
-		fmt.Sprintf("%2.1f", process.memUsage),
+		process.Pid,
+		process.Cmd,
+		fmt.Sprintf("%2.1f", process.CPUUsage),
+		fmt.Sprintf("%2.1f", process.MemUsage),
 	)
 }
 
@@ -49,7 +40,7 @@ type ProcessWidget struct {
 	cpuStats    model.CpuStats
 	totalMem    uint64
 	pageSizeKB  uint64
-	processList []*Process
+	processList []*model.Process
 	cursor      int
 }
 
@@ -74,7 +65,7 @@ func NewProcessWidget() Widget {
 		cpuStats:    cpuStats,
 		totalMem:    totalMem,
 		pageSizeKB:  uint64(pageSizeKB),
-		processList: make([]*Process, 0),
+		processList: make([]*model.Process, 0),
 		cursor:      1,
 	}
 }
@@ -123,8 +114,8 @@ func (widget *ProcessWidget) GetUI() tui.Drawable {
 	return drawWidget
 }
 
-func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uint64) []*Process {
-	processList := make([]*Process, 0)
+func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uint64) []*model.Process {
+	processList := make([]*model.Process, 0)
 	for _, file := range files {
 		pid := file.Name()
 		_, err := strconv.Atoi(pid)
@@ -132,18 +123,12 @@ func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uin
 			continue
 		}
 
-		cmdBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/comm", pid))
+		cmd, err := handler.GetCommand(pid)
 		if err != nil {
 			continue
 		}
-		cmd := strings.TrimSpace(string(cmdBytes))
 
-		statBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/stat", pid))
-		if err != nil {
-			continue
-		}
-		statStrings := strings.Split(strings.TrimSpace(string(statBytes)), " ")
-		curCPUUsage, err := strconv.ParseUint(statStrings[13], 10, 64)
+		curCPUUsage, err := handler.GetCPUUsage(pid)
 		if err != nil {
 			continue
 		}
@@ -151,36 +136,31 @@ func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uin
 		var prevCPUUsage uint64
 		prevProcess, err := widget.findProcess(pid)
 		if err == nil {
-			prevCPUUsage = prevProcess.totalCPUUsage
+			prevCPUUsage = prevProcess.TotalCPUUsage
 		}
 		cpuUsage := float64((curCPUUsage-prevCPUUsage)*uint64(widget.cpuStats.Cores)*100) / float64(totalTime)
 
-		statmBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/statm", pid))
-		if err != nil {
-			continue
-		}
-		statmStrings := strings.Split(strings.TrimSpace(string(statmBytes)), " ")
-		resident, err := strconv.ParseUint(statmStrings[1], 10, 64)
+		resident, err := handler.GetMemUsage(pid)
 		if err != nil {
 			continue
 		}
 		memUsage := (float64)(resident*widget.pageSizeKB) / (float64)(widget.totalMem) * 100.0
 
-		process := &Process{
-			pid:           file.Name(),
-			cmd:           cmd,
-			totalCPUUsage: curCPUUsage,
-			cpuUsage:      cpuUsage,
-			memUsage:      memUsage,
+		process := &model.Process{
+			Pid:           file.Name(),
+			Cmd:           cmd,
+			TotalCPUUsage: curCPUUsage,
+			CPUUsage:      cpuUsage,
+			MemUsage:      memUsage,
 		}
 		processList = append(processList, process)
 	}
 	return processList
 }
 
-func (widget *ProcessWidget) findProcess(pid string) (*Process, error) {
+func (widget *ProcessWidget) findProcess(pid string) (*model.Process, error) {
 	for _, process := range widget.processList {
-		if process.pid == pid {
+		if process.Pid == pid {
 			return process, nil
 		}
 	}
@@ -192,10 +172,10 @@ func (widget *ProcessWidget) getRows() []string {
 	rows[0] = getFormattedString("PID", "COMMAND", "CPU", "MEM")
 
 	sort.Slice(widget.processList, func(i int, j int) bool {
-		return widget.processList[i].cpuUsage > widget.processList[j].cpuUsage
+		return widget.processList[i].CPUUsage > widget.processList[j].CPUUsage
 	})
 	for i, process := range widget.processList {
-		rows[i+1] = process.getString()
+		rows[i+1] = getString(process)
 	}
 	return rows
 }
