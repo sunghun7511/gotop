@@ -10,6 +10,8 @@ import (
 
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
+
+	"github.com/sunghun7511/gotop/util"
 )
 
 type CpuCoreStats struct {
@@ -77,7 +79,7 @@ func (widget *CpuWidget) Update() {
 	previousCpuStats := widget.cpuStats
 
 	totalCpuUsage := calculateCoreUsage(previousCpuStats.totalStats, currentCpuStats.totalStats)
-	widget.totalData[0] = pushUsageData(widget.totalData[0], totalCpuUsage)
+	widget.totalData[0] = util.PushUsageData(widget.totalData[0], totalCpuUsage)
 
 	cores := currentCpuStats.cores
 	for core := 0; core < cores; core++ {
@@ -85,7 +87,7 @@ func (widget *CpuWidget) Update() {
 		currentCoreStats := currentCpuStats.stats[core]
 
 		coreUsage := calculateCoreUsage(previousCoreStats, currentCoreStats)
-		widget.data[core] = pushUsageData(widget.data[core], coreUsage)
+		widget.data[core] = util.PushUsageData(widget.data[core], coreUsage)
 	}
 
 	widget.cpuStats = currentCpuStats
@@ -175,10 +177,4 @@ func calculateCoreUsage(previousCoreStats, currentCoreStats CpuCoreStats) float6
 	deltaTotalTime := currentCoreStats.totalTime - previousCoreStats.totalTime
 
 	return (float64(deltaUserProcessTime) / float64(deltaTotalTime)) * 100.0
-}
-
-func pushUsageData(data []float64, coreUsage float64) []float64 {
-	data = append(data, coreUsage)
-	data = data[1:]
-	return data
 }

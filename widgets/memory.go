@@ -2,10 +2,12 @@ package widgets
 
 import (
 	"fmt"
-	tui "github.com/gizak/termui/v3"
-	tWidgets "github.com/gizak/termui/v3/widgets"
 	"io/ioutil"
 	"strings"
+
+	tui "github.com/gizak/termui/v3"
+	tWidgets "github.com/gizak/termui/v3/widgets"
+	"github.com/sunghun7511/gotop/util"
 )
 
 type MemoryWidget struct {
@@ -36,8 +38,7 @@ func (widget *MemoryWidget) Update() {
 	available := information["MemAvailable"]
 
 	value := float64(total-available) / float64(total) * 100
-	widget.history = append(widget.history, value)
-	widget.history = widget.history[1:]
+	util.PushUsageData(widget.history, value)
 }
 
 func (widget *MemoryWidget) HandleSignal(event tui.Event) {
