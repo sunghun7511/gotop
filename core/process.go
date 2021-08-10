@@ -19,28 +19,24 @@ func GetCommand(pid string) (string, error) {
 
 // GetCPUUsage pid 에 해당하는 프로세스의 cpu 사용량을 가져옴
 func GetCPUUsage(pid string) (uint64, error) {
-	statBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/stat", pid))
-	if err != nil {
-		return 0, err
-	}
-	statStrings := strings.Split(strings.TrimSpace(string(statBytes)), " ")
-	curCPUUsage, err := strconv.ParseUint(statStrings[13], 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	return curCPUUsage, nil
+	return getUsage(fmt.Sprintf("/proc/%s/stat", pid), 13)
 }
 
 // GetMemUsage pid 에 해당하는 프로세스의 memory 사용량을 가져옴
 func GetMemUsage(pid string) (uint64, error) {
-	statmBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/statm", pid))
+	return getUsage(fmt.Sprintf("/proc/%s/statm", pid), 1)
+}
+
+// must use 1 line file
+func getUsage(fileName string, idx int) (uint64, error) {
+	statBytes, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
-	statmStrings := strings.Split(strings.TrimSpace(string(statmBytes)), " ")
-	resident, err := strconv.ParseUint(statmStrings[1], 10, 64)
+	statStrings := strings.Split(strings.TrimSpace(string(statBytes)), " ")
+	usage, err := strconv.ParseUint(statStrings[idx], 10, 64)
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
-	return resident, nil
+	return usage, nil
 }
