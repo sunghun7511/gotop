@@ -1,74 +1,95 @@
 package widgets
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
+	"log"
+	"os"
+	"sort"
 	"strconv"
-	"strings"
 
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
+
+	"github.com/sunghun7511/gotop/core"
+	"github.com/sunghun7511/gotop/model"
 )
 
-func getFormattedString(pid, cmd string) string {
+func getFormattedString(pid, cmd, cpu, mem string) string {
 	if len(cmd) > 20 {
 		cmd = cmd[:17] + "..."
 	}
-	return fmt.Sprintf("%7s  %20s", pid, cmd)
+	return fmt.Sprintf("%7s  %20s  %4s%% %4s%%", pid, cmd, cpu, mem)
 }
 
-type Process struct {
-	pid string
-	cmd string
+func getString(process *model.Process) string {
+	return getFormattedString(
+		process.Pid,
+		process.Cmd,
+		fmt.Sprintf("%2.1f", process.CPUUsage),
+		fmt.Sprintf("%2.1f", process.MemUsage),
+	)
 }
 
-func (process *Process) getString() string {
-	return getFormattedString(process.pid, process.cmd)
-}
-
+// ProcessWidget process widget
 type ProcessWidget struct {
-	processList []*Process
+	listWidget *tWidgets.List
+
+	cpuStats    model.CpuStats
+	totalMem    uint64
+	pageSizeKB  uint64
+	processList []*model.Process
 	cursor      int
-	listWidget  *tWidgets.List
 }
 
+// NewProcessWidget get new process widget
 func NewProcessWidget() Widget {
 	listWidget := tWidgets.NewList()
 	listWidget.Title = "Process List"
 	listWidget.TextStyle = tui.NewStyle(tui.ColorYellow)
 	listWidget.Rows = make([]string, 0)
 
+	cpuStats, err := core.GetCPUStats()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	totalMem := uint64(core.ReadMemoryInformation().Total)
+
+	// KB로 단위를 맞추기 위해 1024를 나눠줍니다.
+	pageSizeKB := os.Getpagesize() / 1024
 	return &ProcessWidget{
-		processList: make([]*Process, 0),
-		cursor:      1,
 		listWidget:  listWidget,
+		cpuStats:    cpuStats,
+		totalMem:    totalMem,
+		pageSizeKB:  uint64(pageSizeKB),
+		processList: make([]*model.Process, 0),
+		cursor:      1,
 	}
 }
 
+// Update update process data
 func (widget *ProcessWidget) Update() {
-	files, err := ioutil.ReadDir("/proc")
+	// update cpu data
+	curCPUStat, err := core.GetCPUStats()
 	if err != nil {
 		return
 	}
 
-	processList := make([]*Process, 0)
-	for _, file := range files {
-		pid := file.Name()
-		_, err := strconv.Atoi(pid)
-		if err != nil {
-			continue
-		}
-		cmdBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/comm", pid))
-		if err != nil {
-			continue
-		}
-
-		process := &Process{
-			pid: file.Name(),
-			cmd: strings.TrimSpace(string(cmdBytes)),
-		}
-		processList = append(processList, process)
+	var totalTimeDiff uint64
+	for i := 0; i < widget.cpuStats.Cores; i++ {
+		totalTimeDiff += curCPUStat.Stats[i].TotalTime - widget.cpuStats.Stats[i].TotalTime
+		widget.cpuStats.Stats[i].TotalTime = curCPUStat.Stats[i].TotalTime
 	}
+
+	// update process data
+	files, err := ioutil.ReadDir("/proc")
+	if err != nil {
+		return
+	}
+	processList := widget.parseProcessList(files, totalTimeDiff)
 	widget.processList = processList
 }
 
@@ -93,12 +114,68 @@ func (widget *ProcessWidget) GetUI() tui.Drawable {
 	return drawWidget
 }
 
+func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uint64) []*model.Process {
+	processList := make([]*model.Process, 0)
+	for _, file := range files {
+		pid := file.Name()
+		_, err := strconv.Atoi(pid)
+		if err != nil {
+			continue
+		}
+
+		cmd, err := core.GetCommand(pid)
+		if err != nil {
+			continue
+		}
+
+		curCPUUsage, err := core.GetCPUUsage(pid)
+		if err != nil {
+			continue
+		}
+
+		var prevCPUUsage uint64
+		prevProcess, err := widget.findProcess(pid)
+		if err == nil {
+			prevCPUUsage = prevProcess.TotalCPUUsage
+		}
+		cpuUsage := float64((curCPUUsage-prevCPUUsage)*uint64(widget.cpuStats.Cores)*100) / float64(totalTime)
+
+		resident, err := core.GetMemUsage(pid)
+		if err != nil {
+			continue
+		}
+		memUsage := (float64)(resident*widget.pageSizeKB) / (float64)(widget.totalMem) * 100.0
+
+		process := &model.Process{
+			Pid:           file.Name(),
+			Cmd:           cmd,
+			TotalCPUUsage: curCPUUsage,
+			CPUUsage:      cpuUsage,
+			MemUsage:      memUsage,
+		}
+		processList = append(processList, process)
+	}
+	return processList
+}
+
+func (widget *ProcessWidget) findProcess(pid string) (*model.Process, error) {
+	for _, process := range widget.processList {
+		if process.Pid == pid {
+			return process, nil
+		}
+	}
+	return nil, errors.New("Not Found")
+}
+
 func (widget *ProcessWidget) getRows() []string {
 	rows := make([]string, len(widget.processList)+1)
+	rows[0] = getFormattedString("PID", "COMMAND", "CPU", "MEM")
 
-	rows[0] = getFormattedString("PID", "COMMAND")
+	sort.Slice(widget.processList, func(i int, j int) bool {
+		return widget.processList[i].CPUUsage > widget.processList[j].CPUUsage
+	})
 	for i, process := range widget.processList {
-		rows[i+1] = process.getString()
+		rows[i+1] = getString(process)
 	}
 	return rows
 }
