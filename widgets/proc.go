@@ -17,19 +17,16 @@ import (
 	"github.com/sunghun7511/gotop/model"
 )
 
-func getFormattedString(pid, cmd, cpu, mem string) string {
-	if len(cmd) > 20 {
-		cmd = cmd[:17] + "..."
-	}
-	return fmt.Sprintf("%7s  %20s  %4s%% %4s%%", pid, cmd, cpu, mem)
+func getFormattedString(pid, cpu, mem, cmd string) string {
+	return fmt.Sprintf("%7s  %4s%%  %4s%%  %s", pid, cpu, mem, cmd)
 }
 
 func getString(process *model.Process) string {
 	return getFormattedString(
 		process.Pid,
-		process.Cmd,
 		fmt.Sprintf("%2.1f", process.CPUUsage),
 		fmt.Sprintf("%2.1f", process.MemUsage),
+		process.Cmd,
 	)
 }
 
@@ -171,7 +168,7 @@ func (widget *ProcessWidget) findProcess(pid string) (*model.Process, error) {
 
 func (widget *ProcessWidget) getRows() []string {
 	rows := make([]string, len(widget.processList)+1)
-	rows[0] = getFormattedString("PID", "COMMAND", "CPU", "MEM")
+	rows[0] = getFormattedString("PID", "CPU", "MEM", "COMMAND")
 
 	sort.Slice(widget.processList, func(i int, j int) bool {
 		return widget.processList[i].CPUUsage > widget.processList[j].CPUUsage
