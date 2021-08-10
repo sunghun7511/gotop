@@ -6,7 +6,7 @@ import (
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
 
-	"github.com/sunghun7511/gotop/handler"
+	"github.com/sunghun7511/gotop/core"
 	"github.com/sunghun7511/gotop/model"
 	"github.com/sunghun7511/gotop/util"
 )
@@ -29,7 +29,7 @@ func NewCpuWidget() Widget {
 	plot.ShowAxes = false
 	plot.MaxVal = 100
 
-	cpuStats, err := handler.GetCPUStats()
+	cpuStats, err := core.GetCPUStats()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func NewCpuWidget() Widget {
 }
 
 func (widget *CpuWidget) Update() {
-	currentCpuStats, err := handler.GetCPUStats()
+	currentCpuStats, err := core.GetCPUStats()
 	if err != nil {
 		log.Print(err)
 		return

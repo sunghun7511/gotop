@@ -13,7 +13,7 @@ import (
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
 
-	"github.com/sunghun7511/gotop/handler"
+	"github.com/sunghun7511/gotop/core"
 	"github.com/sunghun7511/gotop/model"
 )
 
@@ -51,12 +51,12 @@ func NewProcessWidget() Widget {
 	listWidget.TextStyle = tui.NewStyle(tui.ColorYellow)
 	listWidget.Rows = make([]string, 0)
 
-	cpuStats, err := handler.GetCPUStats()
+	cpuStats, err := core.GetCPUStats()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	totalMem := uint64(handler.ReadMemoryInformation().Total)
+	totalMem := uint64(core.ReadMemoryInformation().Total)
 
 	// KB로 단위를 맞추기 위해 1024를 나눠줍니다.
 	pageSizeKB := os.Getpagesize() / 1024
@@ -73,7 +73,7 @@ func NewProcessWidget() Widget {
 // Update update process data
 func (widget *ProcessWidget) Update() {
 	// update cpu data
-	curCPUStat, err := handler.GetCPUStats()
+	curCPUStat, err := core.GetCPUStats()
 	if err != nil {
 		return
 	}
@@ -123,12 +123,12 @@ func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uin
 			continue
 		}
 
-		cmd, err := handler.GetCommand(pid)
+		cmd, err := core.GetCommand(pid)
 		if err != nil {
 			continue
 		}
 
-		curCPUUsage, err := handler.GetCPUUsage(pid)
+		curCPUUsage, err := core.GetCPUUsage(pid)
 		if err != nil {
 			continue
 		}
@@ -140,7 +140,7 @@ func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uin
 		}
 		cpuUsage := float64((curCPUUsage-prevCPUUsage)*uint64(widget.cpuStats.Cores)*100) / float64(totalTime)
 
-		resident, err := handler.GetMemUsage(pid)
+		resident, err := core.GetMemUsage(pid)
 		if err != nil {
 			continue
 		}

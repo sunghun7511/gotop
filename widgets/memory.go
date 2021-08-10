@@ -4,7 +4,7 @@ import (
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
 
-	"github.com/sunghun7511/gotop/handler"
+	"github.com/sunghun7511/gotop/core"
 	"github.com/sunghun7511/gotop/util"
 )
 
@@ -31,7 +31,7 @@ func NewMemoryWidget() Widget {
 }
 
 func (widget *MemoryWidget) Update() {
-	information := handler.ReadMemoryInformation()
+	information := core.ReadMemoryInformation()
 	total := information.Total
 	available := information.Available
 
