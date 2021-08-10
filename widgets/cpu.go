@@ -6,6 +6,7 @@ import (
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
 
+	constants "github.com/sunghun7511/gotop/constants"
 	"github.com/sunghun7511/gotop/core"
 	"github.com/sunghun7511/gotop/model"
 	"github.com/sunghun7511/gotop/util"
@@ -20,7 +21,6 @@ type CpuWidget struct {
 }
 
 var HorizontalScale = 3
-var MaxDataLength = 2000
 
 func NewCpuWidget() Widget {
 	plot := tWidgets.NewPlot()
@@ -38,11 +38,11 @@ func NewCpuWidget() Widget {
 	data := make([][]float64, cpuStats.Cores)
 
 	for i := 0; i < cpuStats.Cores; i++ {
-		data[i] = make([]float64, MaxDataLength)
+		data[i] = make([]float64, constants.MaxDataLength)
 	}
 
 	totalData := make([][]float64, 1)
-	totalData[0] = make([]float64, MaxDataLength)
+	totalData[0] = make([]float64, constants.MaxDataLength)
 
 	return &CpuWidget{
 		cpuStats:     cpuStats,
@@ -84,13 +84,13 @@ func (widget *CpuWidget) HandleSignal(event tui.Event) {
 	}
 }
 
-func calculateDataLength() int {
+func calculateCpuWidgetDataLength() int {
 	termWidth, _ := tui.TerminalDimensions()
 	return termWidth/HorizontalScale + 1
 }
 
 func (widget *CpuWidget) GetUI() tui.Drawable {
-	dataLength := calculateDataLength()
+	dataLength := calculateCpuWidgetDataLength()
 	if widget.showEachCore {
 		widget.plot.Data = util.GetLastElementsOfEachRow(widget.data, dataLength)
 	} else {
