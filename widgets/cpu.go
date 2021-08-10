@@ -21,6 +21,11 @@ type CpuWidget struct {
 
 var HorizontalScale = 3
 
+func calculateDataLength() int {
+	termWidth, _ := tui.TerminalDimensions()
+	return termWidth/HorizontalScale + 1
+}
+
 func NewCpuWidget() Widget {
 	plot := tWidgets.NewPlot()
 	plot.Title = " CPU Usage "
@@ -36,13 +41,13 @@ func NewCpuWidget() Widget {
 
 	data := make([][]float64, cpuStats.Cores)
 
-	termWidth, _ := tui.TerminalDimensions()
+	dataLength := calculateDataLength()
 	for i := 0; i < cpuStats.Cores; i++ {
-		data[i] = make([]float64, termWidth/HorizontalScale+1)
+		data[i] = make([]float64, dataLength)
 	}
 
 	totalData := make([][]float64, 1)
-	totalData[0] = make([]float64, termWidth/HorizontalScale+1)
+	totalData[0] = make([]float64, dataLength)
 
 	plot.Data = totalData
 
@@ -77,6 +82,30 @@ func (widget *CpuWidget) Update() {
 	}
 
 	widget.cpuStats = currentCpuStats
+
+	widget.updateDataLength()
+}
+
+func (widget *CpuWidget) updateDataLength() {
+	newLength := calculateDataLength()
+	currentLength := len(widget.totalData[0])
+	cores := widget.cpuStats.Cores
+
+	if newLength > currentLength { // terminal expanded
+		lengthDifference := newLength - currentLength
+
+		widget.totalData[0] = append(make([]float64, lengthDifference), widget.totalData[0]...)
+		for core := 0; core < cores; core++ {
+			widget.data[core] = append(make([]float64, lengthDifference), widget.data[core]...)
+		}
+	} else if newLength < currentLength { // terminal shrinked
+		lengthDifference := currentLength - newLength
+
+		widget.totalData[0] = widget.totalData[0][lengthDifference:]
+		for core := 0; core < cores; core++ {
+			widget.data[core] = widget.data[core][lengthDifference:]
+		}
+	}
 }
 
 func (widget *CpuWidget) HandleSignal(event tui.Event) {
