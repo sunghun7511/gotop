@@ -102,6 +102,15 @@ func (widget *ProcessWidget) HandleSignal(event tui.Event) {
 	case "<Up>":
 		if widget.cursor-1 > 0 {
 			widget.cursor--
+		} else if widget.cursor -1 == 0{
+			// For showing header
+			// termui list widget does not support handle topRow in other package
+			newListWidget := tWidgets.NewList()
+			newListWidget.Title = widget.listWidget.Title
+			newListWidget.TextStyle = widget.listWidget.TextStyle
+			newListWidget.Rows = widget.listWidget.Rows
+
+			widget.listWidget = newListWidget
 		}
 	case "<Down>":
 		if widget.cursor+1 < len(widget.processList) {
