@@ -17,13 +17,14 @@ import (
 	"github.com/sunghun7511/gotop/model"
 )
 
-func getFormattedString(pid, cpu, mem, cmd string) string {
-	return fmt.Sprintf("%7s  %4s%%  %4s%%  %s", pid, cpu, mem, cmd)
+func getFormattedString(pid, user, cpu, mem, cmd string) string {
+	return fmt.Sprintf("%7s %7s  %4s%%  %4s%%  %s", pid, user, cpu, mem, cmd)
 }
 
 func getString(process *model.Process) string {
 	return getFormattedString(
 		process.Pid,
+		process.User,
 		fmt.Sprintf("%2.1f", process.CPUUsage),
 		fmt.Sprintf("%2.1f", process.MemUsage),
 		process.Cmd,
@@ -145,8 +146,14 @@ func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uin
 		}
 		memUsage := (float64)(resident*widget.pageSizeKB) / (float64)(widget.totalMem) * 100.0
 
+		user, err := core.GetUser(pid)
+		if err != nil {
+			continue
+		}
+
 		process := &model.Process{
 			Pid:           file.Name(),
+			User:          user,
 			Cmd:           cmd,
 			TotalCPUUsage: curCPUUsage,
 			CPUUsage:      cpuUsage,
@@ -168,7 +175,7 @@ func (widget *ProcessWidget) findProcess(pid string) (*model.Process, error) {
 
 func (widget *ProcessWidget) getRows() []string {
 	rows := make([]string, len(widget.processList)+1)
-	rows[0] = getFormattedString("PID", "CPU", "MEM", "COMMAND")
+	rows[0] = getFormattedString("PID", "USER", "CPU", "MEM", "COMMAND")
 
 	sort.Slice(widget.processList, func(i int, j int) bool {
 		return widget.processList[i].CPUUsage > widget.processList[j].CPUUsage

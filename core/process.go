@@ -1,11 +1,46 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
 )
+
+var userMap map[int]string
+
+func init() {
+	err := setUserMap()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func setUserMap() error {
+	statBytes, err := ioutil.ReadFile("/etc/passwd")
+	if err != nil {
+		return err
+	}
+
+	userMap = make(map[int]string)
+	for _, line := range strings.Split(string(statBytes), "\n") {
+		if len(line) == 0 {
+			continue
+		}
+
+		splited := strings.Split(line, ":")
+
+		userName := splited[0]
+		userId, err := strconv.ParseUint(splited[2], 10, 64)
+		if err != nil {
+			return err
+		}
+
+		userMap[int(userId)] = userName
+	}
+	return nil
+}
 
 // GetCommand pid 에 해당하는 프로세스 커맨드를 가져옴
 func GetCommand(pid string) (string, error) {
@@ -39,4 +74,33 @@ func getUsage(fileName string, idx int) (uint64, error) {
 		return 0, err
 	}
 	return usage, nil
+}
+
+// GetMemUsage pid 에 해당하는 프로세스의 user를 가져옴
+func GetUser(pid string) (string, error) {
+	statBytes, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/status", pid))
+	if err != nil {
+		return "", err
+	}
+
+	for _, line := range strings.Split(string(statBytes), "\n") {
+		if len(line) == 0 {
+			continue
+		}
+
+		splited := strings.Split(line, "\t")
+		if splited[0] == "Uid:" {
+			uid, err := strconv.ParseUint(splited[1], 10, 64)
+			if err != nil {
+				return "", err
+			}
+
+			userName, ok := userMap[int(uid)]
+			if !ok {
+				return "", errors.New("Undefined user")
+			}
+			return userName, nil
+		}
+	}
+	return "", errors.New("Cannot get user")
 }
