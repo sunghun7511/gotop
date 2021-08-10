@@ -11,7 +11,7 @@ import (
 type MemoryWidget struct {
 	history []float64
 	widget  *tWidgets.Sparkline
-	group   *tWidgets.SparklineGroup
+	group   *util.FixedSparklineGroup
 }
 
 func NewMemoryWidget() Widget {
@@ -19,14 +19,14 @@ func NewMemoryWidget() Widget {
 	widget.LineColor = tui.ColorGreen
 	widget.MaxVal = 100
 
-	group := tWidgets.NewSparklineGroup(widget)
+	group := util.FixedSparklineGroup{*tWidgets.NewSparklineGroup(widget)}
 	group.Title = "Memory Usage"
 
 	termWidth, _ := tui.TerminalDimensions()
 	return &MemoryWidget{
 		history: make([]float64, termWidth/2-2),
 		widget:  widget,
-		group:   group,
+		group:   &group,
 	}
 }
 
