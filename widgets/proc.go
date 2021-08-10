@@ -17,17 +17,21 @@ import (
 	"github.com/sunghun7511/gotop/model"
 )
 
-func getFormattedString(pid, user, cpu, mem, cmd string) string {
-	return fmt.Sprintf("%7s %7s  %4s%%  %4s%%  %s", pid, user, cpu, mem, cmd)
+func getFormattedString(pid, user, cpu, mem, cmd string, cursor int) string {
+	if len(user) > 8 {
+		user = user[0:6] + ".."
+	}
+	return fmt.Sprintf("%-7s  %-8s  %4s%%  %4s%%  %s", pid, user, cpu, mem, cmd)[cursor:]
 }
 
-func getString(process *model.Process) string {
+func getString(process *model.Process, cursor int) string {
 	return getFormattedString(
 		process.Pid,
 		process.User,
 		fmt.Sprintf("%2.1f", process.CPUUsage),
 		fmt.Sprintf("%2.1f", process.MemUsage),
 		process.Cmd,
+		cursor,
 	)
 }
 
@@ -35,11 +39,12 @@ func getString(process *model.Process) string {
 type ProcessWidget struct {
 	listWidget *tWidgets.List
 
-	cpuStats    model.CpuStats
-	totalMem    uint64
-	pageSizeKB  uint64
-	processList []*model.Process
-	cursor      int
+	cpuStats         model.CpuStats
+	totalMem         uint64
+	pageSizeKB       uint64
+	processList      []*model.Process
+	cursor           int
+	horizontalCursor int
 }
 
 // NewProcessWidget get new process widget
@@ -59,12 +64,13 @@ func NewProcessWidget() Widget {
 	// KB로 단위를 맞추기 위해 1024를 나눠줍니다.
 	pageSizeKB := os.Getpagesize() / 1024
 	return &ProcessWidget{
-		listWidget:  listWidget,
-		cpuStats:    cpuStats,
-		totalMem:    totalMem,
-		pageSizeKB:  uint64(pageSizeKB),
-		processList: make([]*model.Process, 0),
-		cursor:      1,
+		listWidget:       listWidget,
+		cpuStats:         cpuStats,
+		totalMem:         totalMem,
+		pageSizeKB:       uint64(pageSizeKB),
+		processList:      make([]*model.Process, 0),
+		cursor:           1,
+		horizontalCursor: 0,
 	}
 }
 
@@ -101,6 +107,12 @@ func (widget *ProcessWidget) HandleSignal(event tui.Event) {
 		if widget.cursor+1 < len(widget.processList) {
 			widget.cursor++
 		}
+	case "<Left>":
+		if widget.horizontalCursor > 0 {
+			widget.horizontalCursor--;
+		}
+	case "<Right>":
+		widget.horizontalCursor++;
 	case "K":
 		_ = widget.killProcess()
 	}
@@ -175,13 +187,13 @@ func (widget *ProcessWidget) findProcess(pid string) (*model.Process, error) {
 
 func (widget *ProcessWidget) getRows() []string {
 	rows := make([]string, len(widget.processList)+1)
-	rows[0] = getFormattedString("PID", "USER", "CPU", "MEM", "COMMAND")
+	rows[0] = getFormattedString("PID", "USER", "CPU", "MEM", "COMMAND", widget.horizontalCursor)
 
 	sort.Slice(widget.processList, func(i int, j int) bool {
 		return widget.processList[i].CPUUsage > widget.processList[j].CPUUsage
 	})
 	for i, process := range widget.processList {
-		rows[i+1] = getString(process)
+		rows[i+1] = getString(process, widget.horizontalCursor)
 	}
 	return rows
 }
