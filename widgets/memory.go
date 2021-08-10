@@ -4,6 +4,7 @@ import (
 	tui "github.com/gizak/termui/v3"
 	tWidgets "github.com/gizak/termui/v3/widgets"
 
+	constants "github.com/sunghun7511/gotop/constants"
 	"github.com/sunghun7511/gotop/core"
 	"github.com/sunghun7511/gotop/util"
 )
@@ -22,9 +23,8 @@ func NewMemoryWidget() Widget {
 	group := tWidgets.NewSparklineGroup(widget)
 	group.Title = "Memory Usage"
 
-	termWidth, _ := tui.TerminalDimensions()
 	return &MemoryWidget{
-		history: make([]float64, termWidth/2-2),
+		history: make([]float64, constants.MaxDataLength),
 		widget:  widget,
 		group:   group,
 	}
@@ -45,7 +45,13 @@ func (widget *MemoryWidget) HandleSignal(event tui.Event) {
 	}
 }
 
+func calculateMemoryWidgetDataLength() int {
+	termWidth, _ := tui.TerminalDimensions()
+	return termWidth/2 - 2
+}
+
 func (widget *MemoryWidget) GetUI() tui.Drawable {
-	widget.widget.Data = widget.history
+	dataLength := calculateMemoryWidgetDataLength()
+	widget.widget.Data = util.GetLastElements(widget.history, dataLength)
 	return widget.group
 }
