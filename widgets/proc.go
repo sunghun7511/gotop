@@ -17,19 +17,21 @@ import (
 	"github.com/sunghun7511/gotop/model"
 )
 
-func getFormattedString(pid, cmd, cpu, mem string) string {
-	if len(cmd) > 20 {
-		cmd = cmd[:17] + "..."
+func getFormattedString(pid, user, cpu, mem, cmd string, cursor int) string {
+	if len(user) > 8 {
+		user = user[0:6] + ".."
 	}
-	return fmt.Sprintf("%7s  %20s  %4s%% %4s%%", pid, cmd, cpu, mem)
+	return fmt.Sprintf("%-7s  %-8s  %4s%%  %4s%%  %s", pid, user, cpu, mem, cmd)[cursor:]
 }
 
-func getString(process *model.Process) string {
+func getString(process *model.Process, cursor int) string {
 	return getFormattedString(
 		process.Pid,
-		process.Cmd,
+		process.User,
 		fmt.Sprintf("%2.1f", process.CPUUsage),
 		fmt.Sprintf("%2.1f", process.MemUsage),
+		process.Cmd,
+		cursor,
 	)
 }
 
@@ -37,11 +39,12 @@ func getString(process *model.Process) string {
 type ProcessWidget struct {
 	listWidget *tWidgets.List
 
-	cpuStats    model.CpuStats
-	totalMem    uint64
-	pageSizeKB  uint64
-	processList []*model.Process
-	cursor      int
+	cpuStats         model.CpuStats
+	totalMem         uint64
+	pageSizeKB       uint64
+	processList      []*model.Process
+	cursor           int
+	horizontalCursor int
 }
 
 // NewProcessWidget get new process widget
@@ -61,12 +64,13 @@ func NewProcessWidget() Widget {
 	// KB로 단위를 맞추기 위해 1024를 나눠줍니다.
 	pageSizeKB := os.Getpagesize() / 1024
 	return &ProcessWidget{
-		listWidget:  listWidget,
-		cpuStats:    cpuStats,
-		totalMem:    totalMem,
-		pageSizeKB:  uint64(pageSizeKB),
-		processList: make([]*model.Process, 0),
-		cursor:      1,
+		listWidget:       listWidget,
+		cpuStats:         cpuStats,
+		totalMem:         totalMem,
+		pageSizeKB:       uint64(pageSizeKB),
+		processList:      make([]*model.Process, 0),
+		cursor:           1,
+		horizontalCursor: 0,
 	}
 }
 
@@ -98,11 +102,28 @@ func (widget *ProcessWidget) HandleSignal(event tui.Event) {
 	case "<Up>":
 		if widget.cursor-1 > 0 {
 			widget.cursor--
+		} else if widget.cursor -1 == 0{
+			// For showing header
+			// termui list widget does not support handle topRow in other package
+			newListWidget := tWidgets.NewList()
+			newListWidget.Title = widget.listWidget.Title
+			newListWidget.TextStyle = widget.listWidget.TextStyle
+			newListWidget.Rows = widget.listWidget.Rows
+
+			widget.listWidget = newListWidget
 		}
 	case "<Down>":
 		if widget.cursor+1 < len(widget.processList) {
 			widget.cursor++
 		}
+	case "<Left>":
+		if widget.horizontalCursor > 0 {
+			widget.horizontalCursor--;
+		}
+	case "<Right>":
+		widget.horizontalCursor++;
+	case "K":
+		_ = widget.killProcess()
 	}
 }
 
@@ -146,8 +167,14 @@ func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uin
 		}
 		memUsage := (float64)(resident*widget.pageSizeKB) / (float64)(widget.totalMem) * 100.0
 
+		user, err := core.GetUser(pid)
+		if err != nil {
+			continue
+		}
+
 		process := &model.Process{
 			Pid:           file.Name(),
+			User:          user,
 			Cmd:           cmd,
 			TotalCPUUsage: curCPUUsage,
 			CPUUsage:      cpuUsage,
@@ -169,13 +196,28 @@ func (widget *ProcessWidget) findProcess(pid string) (*model.Process, error) {
 
 func (widget *ProcessWidget) getRows() []string {
 	rows := make([]string, len(widget.processList)+1)
-	rows[0] = getFormattedString("PID", "COMMAND", "CPU", "MEM")
+	rows[0] = getFormattedString("PID", "USER", "CPU", "MEM", "COMMAND", widget.horizontalCursor)
 
 	sort.Slice(widget.processList, func(i int, j int) bool {
 		return widget.processList[i].CPUUsage > widget.processList[j].CPUUsage
 	})
 	for i, process := range widget.processList {
-		rows[i+1] = getString(process)
+		rows[i+1] = getString(process, widget.horizontalCursor)
 	}
 	return rows
+}
+
+func (widget *ProcessWidget) killProcess() error {
+	if widget.cursor > len(widget.processList) {
+		return errors.New("Cursor index out of range")
+	}
+
+	// ignore error, handle number string in parseProcessList
+	pid, _ := strconv.Atoi(widget.processList[widget.cursor-1].Pid)
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+
+	return process.Kill()
 }
