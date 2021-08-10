@@ -103,6 +103,8 @@ func (widget *ProcessWidget) HandleSignal(event tui.Event) {
 		if widget.cursor+1 < len(widget.processList) {
 			widget.cursor++
 		}
+	case "K":
+		_ = widget.killProcess()
 	}
 }
 
@@ -178,4 +180,19 @@ func (widget *ProcessWidget) getRows() []string {
 		rows[i+1] = getString(process)
 	}
 	return rows
+}
+
+func (widget *ProcessWidget) killProcess() error {
+	if widget.cursor > len(widget.processList) {
+		return errors.New("Cursor index out of range")
+	}
+
+	// ignore error, handle number string in parseProcessList
+	pid, _ := strconv.Atoi(widget.processList[widget.cursor-1].Pid)
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+
+	return process.Kill()
 }
