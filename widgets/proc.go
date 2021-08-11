@@ -3,6 +3,7 @@ package widgets
 import (
 	"errors"
 	"fmt"
+	"math"
 	"io/fs"
 	"io/ioutil"
 	"log"
@@ -182,7 +183,7 @@ func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uin
 			User:          user,
 			Cmd:           cmd,
 			TotalCPUUsage: curCPUUsage,
-			CPUUsage:      cpuUsage,
+			CPUUsage:      math.Min(cpuUsage, float64(widget.cpuStats.Cores * 100)),
 			MemUsage:      memUsage,
 		}
 		processList = append(processList, process)
