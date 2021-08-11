@@ -21,7 +21,12 @@ func getFormattedString(pid, user, cpu, mem, cmd string, cursor int) string {
 	if len(user) > 8 {
 		user = user[0:6] + ".."
 	}
-	return fmt.Sprintf("%-7s  %-8s  %4s%%  %4s%%  %s", pid, user, cpu, mem, cmd)[cursor:]
+
+	str := fmt.Sprintf("%-7s  %-8s  %4s%%  %4s%%  %s", pid, user, cpu, mem, cmd)
+	if cursor >= len(str) {
+		return ""
+	}
+	return str[cursor:]
 }
 
 func getString(process *model.Process, cursor int) string {
