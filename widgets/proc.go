@@ -3,6 +3,7 @@ package widgets
 import (
 	"errors"
 	"fmt"
+	"math"
 	"io/fs"
 	"io/ioutil"
 	"log"
@@ -21,15 +22,20 @@ func getFormattedString(pid, user, cpu, mem, cmd string, cursor int) string {
 	if len(user) > 8 {
 		user = user[0:6] + ".."
 	}
-	return fmt.Sprintf("%-7s  %-8s  %4s%%  %4s%%  %s", pid, user, cpu, mem, cmd)[cursor:]
+
+	str := fmt.Sprintf("%7s  %-8s  %6s  %6s  %s", pid, user, cpu, mem, cmd)
+	if cursor >= len(str) {
+		return ""
+	}
+	return str[cursor:]
 }
 
 func getString(process *model.Process, cursor int) string {
 	return getFormattedString(
 		process.Pid,
 		process.User,
-		fmt.Sprintf("%2.1f", process.CPUUsage),
-		fmt.Sprintf("%2.1f", process.MemUsage),
+		fmt.Sprintf("%2.1f%%", process.CPUUsage),
+		fmt.Sprintf("%2.1f%%", process.MemUsage),
 		process.Cmd,
 		cursor,
 	)
@@ -177,7 +183,7 @@ func (widget *ProcessWidget) parseProcessList(files []fs.FileInfo, totalTime uin
 			User:          user,
 			Cmd:           cmd,
 			TotalCPUUsage: curCPUUsage,
-			CPUUsage:      cpuUsage,
+			CPUUsage:      math.Min(cpuUsage, float64(widget.cpuStats.Cores * 100)),
 			MemUsage:      memUsage,
 		}
 		processList = append(processList, process)
